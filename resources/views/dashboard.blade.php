@@ -1,95 +1,236 @@
 @extends('rate-limit-dashboard::layout')
 
 @section('content')
-    <div class="mb-8">
-        <h2 class="text-2xl font-bold leading-tight text-gray-900">Dashboard Overview</h2>
-    </div>
+    @if (session('status'))
+        <div class="flash">{{ session('status') }}</div>
+    @endif
 
-    <!-- Stats -->
-    <div class="grid grid-cols-1 gap-5 sm:grid-cols-3 mb-8">
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-                <dt class="text-sm font-medium text-gray-500 truncate">Total Requests Logged</dt>
-                <dd class="mt-1 text-3xl font-semibold text-gray-900">{{ number_format($stats['total_requests']) }}</dd>
+    <section class="grid stats-grid" aria-label="Summary">
+        <div class="panel metric">
+            <span>Total Requests</span>
+            <strong>{{ number_format($stats['total_requests']) }}</strong>
+        </div>
+        <div class="panel metric">
+            <span>Throttled Requests</span>
+            <strong>{{ number_format($stats['throttled_requests']) }}</strong>
+        </div>
+        <div class="panel metric">
+            <span>Active Limiters</span>
+            <strong>{{ number_format($stats['limiters_count']) }}</strong>
+        </div>
+    </section>
+
+    <section class="grid two-col" style="margin-top: 16px;">
+        <div class="panel">
+            <div class="panel-header">
+                <strong>Hourly Volume</strong>
+                <span class="mono">last {{ $summaries->count() }} windows</span>
+            </div>
+            <div class="panel-body">
+                @if ($summaries->isNotEmpty())
+                    @php($maxTotal = max(1, (int) $summaries->max('total_requests')))
+                    <div class="bars" aria-label="Hourly request chart">
+                        @foreach ($summaries as $summary)
+                            <div
+                                class="bar"
+                                title="{{ $summary->window_start->format('Y-m-d H:i') }}: {{ $summary->total_requests }} request(s)"
+                                style="height: {{ max(8, ((int) $summary->total_requests / $maxTotal) * 120) }}px;"
+                            ></div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="empty">No summary windows have been recorded yet.</div>
+                @endif
             </div>
         </div>
 
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-                <dt class="text-sm font-medium text-gray-500 truncate">Throttled Requests</dt>
-                <dd class="mt-1 text-3xl font-semibold text-red-600">{{ number_format($stats['throttled_requests']) }}</dd>
+        <div class="panel">
+            <div class="panel-header">
+                <strong>Health Checks</strong>
+                <span class="mono">{{ count($checks) }} result(s)</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Severity</th>
+                            <th>Check</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($checks as $check)
+                            <tr>
+                                <td><span class="badge badge-{{ $check['severity'] }}">{{ $check['severity'] }}</span></td>
+                                <td>
+                                    <strong>{{ $check['code'] }}</strong><br>
+                                    <span>{{ $check['message'] }}</span>
+                                </td>
+                                <td>{{ $check['action'] ?? 'No action required.' }}</td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="3" class="empty">No checks are enabled.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
+    </section>
 
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-                <dt class="text-sm font-medium text-gray-500 truncate">Active Limiters</dt>
-                <dd class="mt-1 text-3xl font-semibold text-gray-900">{{ number_format($stats['limiters_count']) }}</dd>
-            </div>
+    <section class="panel" style="margin-top: 16px;">
+        <div class="panel-header">
+            <strong>Limiter Configuration</strong>
+            <span class="mono">{{ $configs->count() }} configured</span>
         </div>
-    </div>
-
-    <!-- Top Offenders & Recent Events -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- Top Offenders -->
-        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
-            <div class="px-4 py-5 sm:px-6">
-                <h3 class="text-lg leading-6 font-medium text-gray-900">Top Throttled IPs</h3>
-            </div>
-            <div class="border-t border-gray-200">
-                <ul role="list" class="divide-y divide-gray-200">
-                    @forelse($topOffenders as $offender)
-                    <li class="px-4 py-4 flex items-center justify-between sm:px-6">
-                        <div class="text-sm font-medium text-indigo-600">{{ $offender->ip_address ?: 'Unknown IP' }}</div>
-                        <div class="text-sm text-gray-500">{{ number_format($offender->count) }} throttled events</div>
-                    </li>
+        <div class="panel-body">
+            <form method="POST" action="{{ route('rate-limit-dashboard.configs.store') }}">
+                @csrf
+                <div class="form-grid">
+                    <input name="limiter_name" placeholder="limiter name" required>
+                    <input name="max_attempts" type="number" min="1" value="60" required>
+                    <input name="decay_seconds" type="number" min="1" value="60" required>
+                    <input name="alert_threshold" type="number" min="1" max="100" value="80" required>
+                </div>
+                <div style="margin-top: 10px;">
+                    <textarea name="overrides" placeholder='{"ip":{"127.0.0.1":{"max_attempts":120,"decay_seconds":60}}}'></textarea>
+                </div>
+                <div style="margin-top: 10px;">
+                    <input name="reason" placeholder="change reason">
+                </div>
+                <div style="margin-top: 10px; max-width: 180px;">
+                    <button type="submit">Save Limiter</button>
+                </div>
+            </form>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Limiter</th>
+                        <th>Max</th>
+                        <th>Decay</th>
+                        <th>Alert</th>
+                        <th>Overrides</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($configs as $config)
+                        <tr>
+                            <td><strong>{{ $config->limiter_name }}</strong></td>
+                            <td>{{ number_format($config->max_attempts) }}</td>
+                            <td>{{ number_format($config->decay_seconds) }}s</td>
+                            <td>{{ $config->alert_threshold }}%</td>
+                            <td><code>{{ $config->overrides ? json_encode($config->overrides) : '-' }}</code></td>
+                            <td>
+                                <form method="POST" action="{{ route('rate-limit-dashboard.configs.destroy', $config->limiter_name) }}">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="button-danger" type="submit">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
                     @empty
-                    <li class="px-4 py-4 sm:px-6 text-sm text-gray-500">No throttled events recorded yet.</li>
+                        <tr><td colspan="6" class="empty">No runtime limiter configuration has been saved.</td></tr>
                     @endforelse
-                </ul>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel" style="margin-top: 16px;">
+        <div class="panel-header">
+            <strong>Limiter Activity</strong>
+            <span class="mono">{{ $limiters->count() }} tracked</span>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Limiter</th>
+                        <th>Total</th>
+                        <th>Throttled</th>
+                        <th>Current / Max</th>
+                        <th>Utilisation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($limiters as $limiter)
+                        @php($utilisation = $limiter->max_attempts > 0 ? round(($limiter->current_attempts / $limiter->max_attempts) * 100, 1) : 0)
+                        <tr>
+                            <td><strong>{{ $limiter->limiter_name }}</strong></td>
+                            <td>{{ number_format($limiter->total_requests) }}</td>
+                            <td>{{ number_format($limiter->throttled_requests) }}</td>
+                            <td>{{ number_format($limiter->current_attempts) }} / {{ number_format($limiter->max_attempts) }}</td>
+                            <td>{{ $utilisation }}%</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="5" class="empty">No limiter activity has been recorded.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="grid two-col" style="margin-top: 16px;">
+        <div class="panel">
+            <div class="panel-header">
+                <strong>Top Throttled IPs</strong>
+                <span class="mono">top {{ $topOffenders->count() }}</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>IP</th>
+                            <th>Throttles</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($topOffenders as $offender)
+                            <tr>
+                                <td class="mono">{{ $offender->ip_address ?: 'Unknown IP' }}</td>
+                                <td>{{ number_format($offender->count) }}</td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="2" class="empty">No throttled events recorded yet.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <!-- Recent Events -->
-        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
-            <div class="px-4 py-5 sm:px-6">
-                <h3 class="text-lg leading-6 font-medium text-gray-900">Recent Events</h3>
+        <div class="panel">
+            <div class="panel-header">
+                <strong>Recent Activity</strong>
+                <span class="mono">latest {{ $recentEvents->count() }}</span>
             </div>
-            <div class="border-t border-gray-200">
-                <ul role="list" class="divide-y divide-gray-200 h-96 overflow-y-auto">
-                    @forelse($recentEvents as $event)
-                    <li class="px-4 py-4 sm:px-6">
-                        <div class="flex items-center justify-between">
-                            <p class="text-sm font-medium {{ $event->status === 'throttled' ? 'text-red-600' : 'text-green-600' }} truncate">
-                                {{ strtoupper($event->status) }}
-                            </p>
-                            <div class="ml-2 flex-shrink-0 flex">
-                                <p class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                    {{ $event->limiter_name }}
-                                </p>
-                            </div>
-                        </div>
-                        <div class="mt-2 sm:flex sm:justify-between">
-                            <div class="sm:flex text-sm text-gray-500">
-                                <p class="flex items-center">
-                                    {{ $event->request_method }} {{ $event->url_path }}
-                                </p>
-                                <p class="mt-2 sm:mt-0 sm:ml-6 flex items-center">
-                                    IP: {{ $event->ip_address }}
-                                </p>
-                            </div>
-                            <div class="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                                <p>
-                                    {{ $event->created_at->diffForHumans() }}
-                                </p>
-                            </div>
-                        </div>
-                    </li>
-                    @empty
-                    <li class="px-4 py-4 sm:px-6 text-sm text-gray-500">No events recorded yet.</li>
-                    @endforelse
-                </ul>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Limiter</th>
+                            <th>Route</th>
+                            <th>IP</th>
+                            <th>Seen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($recentEvents as $event)
+                            <tr>
+                                <td><span class="badge badge-{{ $event->status }}">{{ $event->status }}</span></td>
+                                <td><strong>{{ $event->limiter_name }}</strong></td>
+                                <td><span class="mono">{{ $event->request_method }} {{ $event->url_path }}</span></td>
+                                <td class="mono">{{ $event->ip_address }}</td>
+                                <td>{{ $event->created_at->diffForHumans() }}</td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="5" class="empty">No events recorded yet.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
-    </div>
+    </section>
 @endsection

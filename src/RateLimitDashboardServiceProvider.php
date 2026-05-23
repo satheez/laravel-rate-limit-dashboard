@@ -4,6 +4,8 @@ namespace Sa\RateLimitDashboard;
 
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
+use Sa\RateLimitDashboard\Console\CheckRateLimitAlertsCommand;
+use Sa\RateLimitDashboard\Console\PruneRateLimitEventsCommand;
 use Sa\RateLimitDashboard\Events\RateLimitHit;
 use Sa\RateLimitDashboard\Events\RateLimitThrottled;
 use Sa\RateLimitDashboard\Listeners\RecordRateLimitEvent;
@@ -21,6 +23,7 @@ class RateLimitDashboardServiceProvider extends ServiceProvider
         $this->registerViews();
         $this->registerPublishing();
         $this->registerEvents();
+        $this->registerCommands();
     }
 
     /**
@@ -115,5 +118,15 @@ class RateLimitDashboardServiceProvider extends ServiceProvider
             RateLimitThrottled::class,
             RecordRateLimitEvent::class
         );
+    }
+
+    protected function registerCommands(): void
+    {
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                CheckRateLimitAlertsCommand::class,
+                PruneRateLimitEventsCommand::class,
+            ]);
+        }
     }
 }

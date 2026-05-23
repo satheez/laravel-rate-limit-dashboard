@@ -1,56 +1,52 @@
 # Usage
 
-Once installed, the dashboard begins tracking rate limit usage instantly for any route protected by the `throttle` middleware or any custom limiters you've defined.
+## Dashboard
 
-## Accessing the Dashboard
+Visit the configured dashboard prefix, `/admin/rate-limits` by default. The dashboard includes:
 
-Navigate to your application's domain followed by the configured dashboard prefix (default: `/admin/rate-limits`).
+- Summary metrics for total and throttled requests.
+- Hourly volume bars from aggregated summaries.
+- Health check results.
+- Runtime limiter configuration forms.
+- Limiter activity, top throttled IPs, and recent events.
 
-```
-https://your-app.test/admin/rate-limits
-```
+## Instrumenting Routes
 
-## Dashboard Features
-
-### 1. Global Metrics
-The top of the dashboard displays high-level statistics for the current day:
-- Total hits across all tracked routes
-- Total throttled requests (429s)
-- Overall limit utilisation percentage
-
-### 2. Live Limiter Configuration
-You can define or edit custom limiters directly from the UI, bypassing the need to define them in your `AppServiceProvider` or routes file.
-
-**To add a dynamic limiter:**
-1. Click **"Add Limiter"**
-2. Enter an identifier (e.g., `api_global` or a specific route name)
-3. Set the **Max Attempts** (e.g., `60`)
-4. Set the **Decay Seconds** (e.g., `60`)
-5. Click **Save**. The configuration is persisted to the database and immediately takes effect.
-
-### 3. Per-IP or Per-User Overrides
-If you have a known good actor (e.g., an internal service) that needs higher limits, or a bad actor that needs strict throttling:
-
-1. Click **"Manage Overrides"** next to a limiter.
-2. Select the type (IP or User ID).
-3. Enter the identifier (e.g., `192.168.1.150`).
-4. Set their custom **Max Attempts** (e.g., `1000` for good actor, `5` for bad actor).
-5. Save.
-
-### 4. Viewing Top Offenders
-The dashboard includes a table of the top offenders. You can click on any IP address or User ID in this list to instantly jump to the override screen and apply a custom limit restriction against them.
-
-## Programmatic Custom Limiters
-
-If you prefer to keep your configuration in code rather than the database, you can define limiters using Laravel's standard facade:
+For package-managed metrics, use the package middleware in place of `throttle`:
 
 ```php
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Support\Facades\RateLimiter;
+use Sa\RateLimitDashboard\Http\Middleware\RateLimitInstrumenter;
 
 RateLimiter::for('api', function ($request) {
     return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
 });
+
+Route::middleware(RateLimitInstrumenter::class.':api')->group(function () {
+    Route::get('/api/search', SearchController::class);
+});
 ```
 
-As long as the route uses `middleware('throttle:api')`, the Dashboard's `RateLimitInstrumenter` middleware will capture and log the events, allowing you to see the metrics in the UI, even if you don't use the UI's dynamic configuration feature.
+The middleware supports numeric limits (`RateLimitInstrumenter::class.':60,1'`) and named limiters (`RateLimitInstrumenter::class.':api'`).
+
+## Runtime Overrides
+
+Use the dashboard configuration form to save a limiter name, max attempts, decay seconds, alert threshold, and optional override JSON. A saved config applies when the middleware limiter name matches `limiter_name`.
+
+## API
+
+The dashboard middleware protects API endpoints:
+
+- `GET /admin/rate-limits/api/metrics`
+- `GET /admin/rate-limits/api/offenders`
+- `GET /admin/rate-limits/api/configs`
+- `GET /admin/rate-limits/api/summaries`
+- `GET /admin/rate-limits/api/checks`
+
+## Commands
+
+```bash
+php artisan rate-limit:prune
+php artisan rate-limit:check-alerts
+```

@@ -1,19 +1,25 @@
 # Frequently Asked Questions
 
-### Does this add overhead to my application?
-The `RateLimitInstrumenter` middleware is designed to be as lightweight as possible. It merely fires an event to Laravel's Event bus. If you configure Laravel to queue listeners, the actual database writes happen asynchronously in your background workers, resulting in zero latency overhead for the HTTP request.
+### Does this add overhead to requests?
 
-### Will my database grow infinitely?
-No. The package includes an artisan command (`php artisan rate-limit:prune`) that deletes raw events older than the configured `retention_days` (default 30 days). You can schedule this command in your `Console/Kernel.php` to run daily.
+Routes using `RateLimitInstrumenter` dispatch an event and write through the configured event listener. The event payload is scalar and queue-safe, so applications may queue listeners if they need lower request latency.
+
+### Does registering the middleware globally throttle every route?
+
+No. Without limiter arguments the middleware does not apply a default throttle. Use it with arguments, such as `RateLimitInstrumenter::class.':api'`, for routes that should be enforced and recorded.
+
+### Will my database grow indefinitely?
+
+Raw events are pruned with `php artisan rate-limit:prune`, using `retention_days` from the package config. Aggregated summaries are retained until removed by your own data policy.
 
 ### What storage drivers are supported?
-Currently, relational databases (`database` - MySQL, PostgreSQL) are fully supported. Experimental support for `redis` is included. You can also implement your own driver by creating a class that implements the `RateLimitStorage` contract.
 
-### Can I block IPs entirely using this?
-While you can set the `max_attempts` override to `0` for an IP address in the dashboard to effectively block it from the rate-limited route, for serious DDoS mitigation or global IP bans, you should still use WAFs (like Cloudflare) or firewall-level IP bans. This package is meant for application-level rate limit logic.
+The current implementation stores through Eloquent, so it supports SQL databases supported by Laravel's database layer. Redis, MongoDB, and custom storage drivers are not implemented yet.
 
-### Does it work with third-party rate limiters?
-This package relies on Laravel's built-in `Illuminate\Cache\RateLimiter`. If a third-party package bypasses the facade entirely and implements its own logic, our middleware will not be able to instrument it.
+### How are API tokens stored?
 
-### Why do I see "unconfigured_routes" warnings?
-The built-in health checks scan your route definitions. If it finds public routes that do not have the `throttle` middleware attached (and aren't explicitly ignored), it raises a warning to remind you to protect your endpoints. You can disable this check in the configuration.
+Bearer tokens are SHA-256 hashed and truncated before storage. Plain bearer tokens are never written to `rate_limit_events`.
+
+### How do threshold alerts work?
+
+Enable notifications, set `RATE_LIMIT_NOTIFY_MAIL_TO`, save limiter configs with alert thresholds, and schedule `rate-limit:check-alerts`.
