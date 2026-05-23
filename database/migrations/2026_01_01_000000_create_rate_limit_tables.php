@@ -50,6 +50,19 @@ return new class extends Migration
 
             $table->unique(['limiter_name', 'time_window', 'window_start'], 'rate_limit_summary_unique');
         });
+
+        Schema::create('rate_limit_config_audits', function (Blueprint $table): void {
+            $table->id();
+            $table->string('limiter_name');
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->string('action');
+            $table->json('before')->nullable();
+            $table->json('after')->nullable();
+            $table->text('reason')->nullable();
+            $table->timestamps();
+
+            $table->index(['limiter_name', 'created_at']);
+        });
     }
 
     /**
@@ -57,6 +70,7 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::dropIfExists('rate_limit_config_audits');
         Schema::dropIfExists('rate_limit_history_summaries');
         Schema::dropIfExists('rate_limit_events');
         Schema::dropIfExists('rate_limit_configs');

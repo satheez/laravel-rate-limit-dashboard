@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Sa\RateLimitDashboard\Tests;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;

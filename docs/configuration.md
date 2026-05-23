@@ -3,77 +3,59 @@
 Publish the config file via:
 
 ```bash
-php artisan vendor:publish --provider="Sa\RateLimitDashboard\RateLimitDashboardServiceProvider" --tag="config"
+php artisan vendor:publish --provider="Sa\RateLimitDashboard\RateLimitDashboardServiceProvider" --tag="rate-limit-dashboard-config"
 ```
-
-This creates `config/rate-limit-dashboard.php`.
 
 ## Environment Variables
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `RATE_LIMIT_DASHBOARD_ENABLED` | `true` | Globally enable/disable event tracking and the dashboard. |
-| `RATE_LIMIT_STORAGE` | `database` | Storage driver (`database`, `redis`). |
-| `RATE_LIMIT_RETENTION_DAYS` | `30` | How long to keep raw event records before pruning. |
-| `RATE_LIMIT_NOTIFY_ENABLED` | `false` | Enable automated alerts. |
-| `RATE_LIMIT_NOTIFY_THRESHOLD` | `80` | Alert threshold percentage (e.g., alert when 80% of limit is used). |
+| `RATE_LIMIT_DASHBOARD_ENABLED` | `true` | Enable event tracking and dashboard routes. |
+| `RATE_LIMIT_STORAGE` | `database` | Reserved storage setting. Current implementation stores through Eloquent. |
+| `RATE_LIMIT_RETENTION_DAYS` | `30` | Raw event retention for `rate-limit:prune`. |
+| `RATE_LIMIT_NOTIFY_ENABLED` | `false` | Enable threshold mail notifications. |
+| `RATE_LIMIT_NOTIFY_MAIL_TO` | `null` | Recipient for threshold notifications. |
+| `RATE_LIMIT_NOTIFY_THRESHOLD` | `80` | Default alert threshold percentage. |
+| `RATE_LIMIT_RAPID_OFFENDER_THRESHOLD` | `10` | Throttles per minute required for the rapid offender check. |
 
-## Full Config Reference
+## Dashboard Access
+
+Default dashboard middleware:
 
 ```php
-return [
-    // Enable or disable the entire monitoring package.
-    'enabled' => env('RATE_LIMIT_DASHBOARD_ENABLED', true),
-
-    // Storage driver: 'database', 'redis', or custom class implementing RateLimitStorage.
-    'storage' => env('RATE_LIMIT_STORAGE', 'database'),
-
-    // Event retention policy in days. Set to null for indefinite retention.
-    'retention_days' => env('RATE_LIMIT_RETENTION_DAYS', 30),
-
-    // Default limit values when no custom limiter is defined.
-    'default_limits' => [
-        'max_attempts' => env('RATE_LIMIT_DEFAULT_MAX_ATTEMPTS', 60),
-        'decay_seconds' => env('RATE_LIMIT_DEFAULT_DECAY', 60),
-    ],
-
-    // Notification settings for threshold alerts.
-    'notifications' => [
-        'enabled' => env('RATE_LIMIT_NOTIFY_ENABLED', false),
-        'channels' => ['mail', 'slack'], // standard Laravel notification channels
-        'threshold_percent' => env('RATE_LIMIT_NOTIFY_THRESHOLD', 80),
-    ],
-
-    // Dashboard route configuration.
-    'dashboard' => [
-        'prefix' => 'admin/rate-limits',
-        'middleware' => ['web', 'auth', 'can:viewRateLimitDashboard'],
-    ],
-
-    // Array of CheckContract classes to run automatically
-    'checks' => [
-        // \Sa\RateLimitDashboard\Checks\HighUtilisationCheck::class,
-    ],
-    
-    // Disable specific checks by their string code
-    'disabled_checks' => [
-        'huge_max_attempts',
-    ],
-];
+'dashboard' => [
+    'prefix' => 'admin/rate-limits',
+    'middleware' => ['web', \Sa\RateLimitDashboard\Http\Middleware\AuthorizeDashboard::class],
+    'authorization_gate' => 'viewRateLimitDashboard',
+],
 ```
 
-## Securing the Dashboard
+`AuthorizeDashboard` denies guests. If the configured gate exists, it must allow the current user.
 
-The dashboard is secured by a Laravel Gate. Define this gate in your `App\Providers\AuthServiceProvider` or `App\Providers\AppServiceProvider`:
+## Runtime Limiter Config
+
+Saved limiter config is used by `RateLimitInstrumenter` when a route uses a matching limiter name.
 
 ```php
-use Illuminate\Support\Facades\Gate;
+'default_limits' => [
+    'max_attempts' => env('RATE_LIMIT_DEFAULT_MAX_ATTEMPTS', 60),
+    'decay_seconds' => env('RATE_LIMIT_DEFAULT_DECAY', 60),
+],
+```
 
-public function boot()
+Override JSON shape:
+
+```json
 {
-    Gate::define('viewRateLimitDashboard', function ($user) {
-        // Example: Only allow admins
-        return $user->isAdmin();
-    });
+  "ip": {
+    "127.0.0.1": {"max_attempts": 120, "decay_seconds": 60}
+  },
+  "user": {
+    "42": {"max_attempts": 1000, "decay_seconds": 60}
+  }
 }
 ```
+
+## Health Checks
+
+Custom checks may implement `Sa\RateLimitDashboard\Contracts\CheckContract` and be registered in `checks`. Disable built-in or custom check codes through `disabled_checks`.

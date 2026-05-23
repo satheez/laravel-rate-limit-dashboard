@@ -4,82 +4,274 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rate Limit Dashboard</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Outfit', 'sans-serif'],
-                    },
-                    colors: {
-                        primary: {
-                            50: '#eef2ff',
-                            100: '#e0e7ff',
-                            500: '#6366f1',
-                            600: '#4f46e5',
-                            900: '#312e81',
-                        }
-                    },
-                    animation: {
-                        blob: "blob 7s infinite",
-                    },
-                    keyframes: {
-                        blob: {
-                            "0%": { transform: "translate(0px, 0px) scale(1)" },
-                            "33%": { transform: "translate(30px, -50px) scale(1.1)" },
-                            "66%": { transform: "translate(-20px, 20px) scale(0.9)" },
-                            "100%": { transform: "translate(0px, 0px) scale(1)" },
-                        }
-                    }
-                }
-            }
-        }
-    </script>
     <style>
-        body {
-            background-color: #f8fafc;
-            background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,0.03) 0, transparent 50%), radial-gradient(at 50% 0%, hsla(225,39%,30%,0.03) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(339,49%,30%,0.03) 0, transparent 50%);
-            background-attachment: fixed;
+        :root {
+            color-scheme: light;
+            --bg: #f6f7f9;
+            --panel: #ffffff;
+            --panel-muted: #f1f5f9;
+            --border: #d9e0e8;
+            --text: #172033;
+            --muted: #667085;
+            --accent: #0f766e;
+            --danger: #b42318;
+            --warning: #b54708;
+            --info: #175cd3;
+            --radius: 8px;
         }
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.4);
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 14px;
+        }
+
+        a {
+            color: var(--info);
+        }
+
+        .shell {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .topbar {
+            border-bottom: 1px solid var(--border);
+            background: var(--panel);
+        }
+
+        .topbar-inner {
+            max-width: 1280px;
+            height: 64px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .brand {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .brand strong {
+            font-size: 18px;
+        }
+
+        .brand span {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .grid {
+            display: grid;
+            gap: 16px;
+        }
+
+        .stats-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .two-col {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+        }
+
+        .panel-header {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .panel-body {
+            padding: 16px;
+        }
+
+        .metric {
+            padding: 16px;
+        }
+
+        .metric span {
+            display: block;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .metric strong {
+            display: block;
+            margin-top: 8px;
+            font-size: 32px;
+            line-height: 1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            color: var(--muted);
+            background: var(--panel-muted);
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        code, .mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 12px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            min-height: 24px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .badge-hit, .badge-info {
+            color: #155eef;
+            background: #eff4ff;
+        }
+
+        .badge-throttled, .badge-error, .badge-critical {
+            color: var(--danger);
+            background: #fef3f2;
+        }
+
+        .badge-warning {
+            color: var(--warning);
+            background: #fffaeb;
+        }
+
+        .empty {
+            padding: 24px;
+            color: var(--muted);
+            text-align: center;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 120px 120px 120px;
+            gap: 10px;
+        }
+
+        input, textarea, button {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font: inherit;
+        }
+
+        input, textarea {
+            padding: 9px 10px;
+            background: #fff;
+        }
+
+        textarea {
+            min-height: 74px;
+            resize: vertical;
+        }
+
+        button {
+            cursor: pointer;
+            padding: 9px 12px;
+            background: var(--accent);
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .button-danger {
+            background: var(--danger);
+        }
+
+        .flash {
+            margin-bottom: 16px;
+            padding: 12px 14px;
+            border: 1px solid #99f6e4;
+            border-radius: var(--radius);
+            color: #115e59;
+            background: #f0fdfa;
+        }
+
+        .bars {
+            display: flex;
+            align-items: end;
+            gap: 6px;
+            min-height: 120px;
+        }
+
+        .bar {
+            flex: 1;
+            min-width: 8px;
+            background: #99f6e4;
+            border: 1px solid #5eead4;
+            border-radius: 4px 4px 0 0;
+        }
+
+        @media (max-width: 900px) {
+            .stats-grid,
+            .two-col,
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .shell,
+            .topbar-inner {
+                padding-left: 14px;
+                padding-right: 14px;
+            }
+
+            .table-wrap {
+                overflow-x: auto;
+            }
         }
     </style>
 </head>
-<body class="font-sans text-slate-800 antialiased min-h-screen flex flex-col relative overflow-x-hidden">
-    <!-- Decorative background blobs -->
-    <div class="absolute top-0 -left-4 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob pointer-events-none"></div>
-    <div class="absolute top-0 -right-4 w-72 h-72 bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob pointer-events-none" style="animation-delay: 2s;"></div>
-    <div class="absolute -bottom-8 left-20 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob pointer-events-none" style="animation-delay: 4s;"></div>
-
-    <div class="relative z-10 flex-1">
-        <nav class="glass-panel sticky top-0 z-50 shadow-sm border-b border-slate-200/60">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between h-20">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
-                        </div>
-                        <span class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 tracking-tight">Rate Limit Dashboard</span>
-                    </div>
-                </div>
+<body>
+    <header class="topbar">
+        <div class="topbar-inner">
+            <div class="brand">
+                <strong>Rate Limit Dashboard</strong>
+                <span>Operational metrics, offender analysis, and limiter controls</span>
             </div>
-        </nav>
+        </div>
+    </header>
 
-        <main class="py-12 relative z-10">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                @yield('content')
-            </div>
-        </main>
-    </div>
+    <main class="shell">
+        @yield('content')
+    </main>
 </body>
 </html>

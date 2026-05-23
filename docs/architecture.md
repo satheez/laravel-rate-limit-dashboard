@@ -2,50 +2,51 @@
 
 ## Source Layout
 
-```
+```text
 src/
 ├── Console/
-│   └── PruneEventsCommand.php           # Artisan command to clean up old rate-limit events
+│   ├── CheckRateLimitAlertsCommand.php
+│   └── PruneRateLimitEventsCommand.php
+├── Contracts/
+│   └── CheckContract.php
+├── Events/
+│   ├── RateLimitHit.php
+│   └── RateLimitThrottled.php
 ├── Http/
 │   ├── Controllers/
-│   │   ├── DashboardController.php      # Renders the UI
-│   │   └── ApiController.php            # JSON API for metrics
+│   │   ├── ApiController.php
+│   │   └── DashboardController.php
 │   └── Middleware/
-│       └── RateLimitInstrumenter.php    # Wraps the throttle middleware to emit events
+│       ├── AuthorizeDashboard.php
+│       └── RateLimitInstrumenter.php
 ├── Listeners/
-│   └── RateLimitEventSubscriber.php     # Captures and stores event data
+│   └── RecordRateLimitEvent.php
+├── Models/
+├── Notifications/
 ├── Services/
-│   ├── MetricsAggregator.php            # Rolls up events into minute/hour summaries
-│   ├── ConfigurationManager.php         # Handles dynamic limit overrides
-│   └── HealthChecker.php                # Runs built-in health checks
-├── Storage/
-│   ├── DatabaseStorage.php              # Relational DB implementation
-│   └── RedisStorage.php                 # Redis implementation
-├── Exceptions/
-└── RateLimitDashboardServiceProvider.php
+│   └── HealthChecker.php
+└── Support/
 ```
 
-## System Layers
+## Instrumentation
 
-### 1. Instrumentation Layer
-The `RateLimitInstrumenter` middleware is a lightweight wrapper around Laravel's `ThrottleRequests` middleware. When a request hits a rate limit or exceeds it, the middleware emits a `RateLimitEvent` to Laravel's event bus containing metadata (e.g., Limiter name, Max allowed attempts, IP address, Timestamp).
+`RateLimitInstrumenter` can replace Laravel's throttle middleware for routes that should be recorded. It mirrors Laravel throttle behavior for numeric and named limiters, including multiple `Limit` objects, unlimited limiters, custom response callbacks, and package-managed DB overrides.
 
-### 2. Data Processing & Storage Layer
-An asynchronous event listener catches these events and stores them in the selected backend (`database` or `redis`). A background aggregator then rolls up these raw events into time-window summaries (e.g., `rate_limit_history_summaries`) to keep dashboard queries fast.
+Registering the middleware without limiter arguments is observer-safe and does not apply a default throttle.
 
-### 3. Presentation Layer
-The Livewire/Vue Dashboard UI queries the aggregated summaries to draw charts, list top offenders, and provide form inputs for configuration overrides. This layer is protected by the `viewRateLimitDashboard` Gate.
+## Event Storage and Aggregation
 
-## Data Model (Relational)
+The middleware dispatches scalar, queue-safe `RateLimitHit` and `RateLimitThrottled` events. `RecordRateLimitEvent` writes raw events to `rate_limit_events` and increments minute, hour, and day rows in `rate_limit_history_summaries`.
 
-### `rate_limit_events`
-Stores raw events.
-- `id` (UUID), `limiter_name`, `limiter_key`, `max_attempts`, `current_attempts`, `ip_address`, `user_id`, `status` (hit/throttled), `timestamp`
+## Dashboard and API
 
-### `rate_limit_configs`
-Stores runtime overrides.
-- `limiter_name`, `max_attempts`, `decay_seconds`, `overrides` (JSON for per-IP rules)
+Dashboard routes are protected by configurable middleware. The Blade dashboard and JSON API read from Eloquent models and aggregated summaries.
 
-### `rate_limit_history_summaries`
-Stores aggregated data.
-- `limiter_name`, `time_window`, `total_requests`, `throttled_requests`
+## Runtime Configuration
+
+`rate_limit_configs` stores limiter overrides. Changes made through the dashboard are audited in `rate_limit_config_audits` and cached briefly for request-time lookup.
+
+## Maintenance
+
+- `rate-limit:prune` deletes old raw events according to `retention_days`.
+- `rate-limit:check-alerts` sends mail notifications when saved limiter configs exceed their alert threshold.

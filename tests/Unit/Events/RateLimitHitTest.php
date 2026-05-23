@@ -1,12 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Http\Request;
 use Sa\RateLimitDashboard\Events\RateLimitHit;
 
 it('assigns properties correctly upon instantiation', function (): void {
     $request = Request::create('/test-url', 'GET');
 
-    $event = new RateLimitHit(
+    $event = RateLimitHit::fromRequest(
         'api_limiter',
         'api_key_123',
         100,
@@ -18,5 +20,6 @@ it('assigns properties correctly upon instantiation', function (): void {
         ->and($event->limiterKey)->toBe('api_key_123')
         ->and($event->maxAttempts)->toBe(100)
         ->and($event->currentAttempts)->toBe(5)
-        ->and($event->request)->toBe($request);
+        ->and($event->requestMethod)->toBe('GET')
+        ->and($event->urlPath)->toBe('test-url');
 });

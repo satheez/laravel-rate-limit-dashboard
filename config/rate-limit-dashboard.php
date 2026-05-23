@@ -1,5 +1,9 @@
 <?php
 
+declare(strict_types=1);
+
+use Sa\RateLimitDashboard\Http\Middleware\AuthorizeDashboard;
+
 return [
     /*
     |--------------------------------------------------------------------------
@@ -58,8 +62,10 @@ return [
     */
     'notifications' => [
         'enabled' => env('RATE_LIMIT_NOTIFY_ENABLED', false),
-        'channels' => ['mail', 'slack'],
+        'channels' => ['mail'],
+        'mail_to' => env('RATE_LIMIT_NOTIFY_MAIL_TO'),
         'threshold_percent' => env('RATE_LIMIT_NOTIFY_THRESHOLD', 80),
+        'rapid_offender_threshold' => env('RATE_LIMIT_RAPID_OFFENDER_THRESHOLD', 10),
     ],
 
     /*
@@ -74,6 +80,22 @@ return [
     */
     'dashboard' => [
         'prefix' => 'admin/rate-limits',
-        'middleware' => ['web'], // Add 'auth' and 'can:viewRateLimitDashboard' in your app
+        'middleware' => ['web', AuthorizeDashboard::class],
+        'authorization_gate' => 'viewRateLimitDashboard',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Health Checks
+    |--------------------------------------------------------------------------
+    */
+    'checks' => [],
+
+    'disabled_checks' => [],
+
+    'thresholds' => [
+        'high_utilisation_percent' => env('RATE_LIMIT_HIGH_UTILISATION_PERCENT', 80),
+        'long_decay_seconds' => env('RATE_LIMIT_LONG_DECAY_SECONDS', 3600),
+        'huge_max_attempts' => env('RATE_LIMIT_HUGE_MAX_ATTEMPTS', 1000),
     ],
 ];

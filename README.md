@@ -2,12 +2,12 @@
 
 # Laravel Rate-Limit Dashboard
 
-**Real-time visibility, dynamic configuration, and actionable insights for your rate-limiting infrastructure.**
+**Visibility and operational controls for Laravel rate-limiting.**
 
 ![Laravel Rate-Limit Dashboard](docs/assets/banner.png)
 
 [![Tests](https://github.com/satheez/laravel-rate-limit-dashboard/actions/workflows/tests.yml/badge.svg)](https://github.com/satheez/laravel-rate-limit-dashboard/actions/workflows/tests.yml)
-[![PHP](https://img.shields.io/badge/PHP-8.1%2B-blue)](https://www.php.net)
+[![PHP](https://img.shields.io/badge/PHP-8.2%2B-blue)](https://www.php.net)
 [![Laravel](https://img.shields.io/badge/Laravel-11%20%7C%2012%20%7C%2013-red)](https://laravel.com)
 [![License](https://img.shields.io/packagist/l/satheez/laravel-rate-limit-dashboard.svg)](LICENSE.md)
 
@@ -17,7 +17,7 @@
 
 Laravel's built-in `RateLimiter` facade and throttle middleware allow you to define rate limits, but they provide **no visual interface** to monitor usage or adjust limits in production.
 
-Laravel Rate-Limit Dashboard bridges this gap by offering a beautiful UI, dynamic configuration, and alerting, answering questions like:
+Laravel Rate-Limit Dashboard bridges this gap with instrumentation, persisted metrics, a secured dashboard, runtime limiter configuration, health checks, JSON endpoints, retention pruning, and threshold mail alerts.
 
 > **Who is hitting the rate limits? Which endpoints are being abused? Can we adjust limits without redeploying?**
 
@@ -39,23 +39,24 @@ This leads to support tickets, unchecked abuse, and misconfigured limits.
 
 **Real-Time Visibility**
 
-- Dashboard showing total requests, throttled requests, and utilisation
-- Top offenders list (IP address, user ID, API token) with throttled counts
+- Dashboard showing total requests, throttled requests, utilisation, hourly volume, health checks, limiter activity, and recent events
+- Top offenders grouped by IP, user ID, or API token through the JSON API
 
 **Dynamic Configuration**
 
-- Edit rate-limit parameters directly from the UI without code deployment
-- Per-user and per-IP overrides (e.g., lower limits for bad actors)
+- Save package-managed limiter settings from the UI
+- Apply per-user and per-IP overrides when using the package instrumenter middleware
 
-**Alerts & Health Checks**
+**Alerts, Checks, and Maintenance**
 
-- Configurable notifications via Slack, email, or webhook when limits reach critical thresholds (e.g., 80% usage)
-- Built-in health checks identifying unconfigured routes, zero decay, or missing storage
+- Built-in health checks for storage, dashboard protection, utilisation, decay settings, offenders, and unconfigured routes
+- `rate-limit:check-alerts` mail notifications for configured threshold breaches
+- `rate-limit:prune` retention cleanup for old raw events
 
-**Pluggable Storage**
+**Storage**
 
-- Supports MySQL, PostgreSQL, Redis, and MongoDB
-- Configurable data retention and automatic purge policies
+- Uses the host application's configured SQL database through Eloquent
+- Stores raw events, runtime limiter configuration, audit entries, and minute/hour/day summaries
 
 ---
 
@@ -77,16 +78,14 @@ php artisan migrate
 
 ## Quick Start
 
-Enable the middleware by adding it to your HTTP kernel or group:
+Use the package middleware in place of Laravel's throttle middleware for routes you want to enforce and record:
 
 ```php
-protected $middleware = [
-    // ...
-    \Sa\RateLimitDashboard\Http\Middleware\RateLimitInstrumenter::class,
-];
+Route::middleware(\Sa\RateLimitDashboard\Http\Middleware\RateLimitInstrumenter::class.':api')
+    ->get('/api/search', SearchController::class);
 ```
 
-Navigate to the dashboard route (default: `/admin/rate-limits`) and you will start seeing metrics populating automatically as requests hit your rate-limited routes.
+Navigate to the dashboard route (default: `/admin/rate-limits`) after defining the `viewRateLimitDashboard` gate or using your own dashboard middleware.
 
 ---
 

@@ -1,6 +1,6 @@
 {
   "name": "satheez/laravel-rate-limit-dashboard",
-  "description": "A Laravel package that provides real-time visibility, dynamic configuration, and actionable insights for rate-limiting.",
+  "description": "A Laravel package that records, aggregates, and visualizes rate-limit activity.",
   "keywords": [
     "Satheez",
     "laravel",
@@ -19,9 +19,8 @@
     }
   ],
   "require": {
-    "php": "^8.1",
-    "illuminate/support": "^11.0|^12.0|^13.0",
-    "illuminate/contracts": "^11.0|^12.0|^13.0"
+    "php": "^8.2",
+    "laravel/framework": "^11.0|^12.0|^13.0"
   },
   "autoload": {
     "psr-4": {

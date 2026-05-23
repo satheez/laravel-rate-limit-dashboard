@@ -8,8 +8,6 @@ Thank you for your interest in contributing to Laravel Rate-Limit Dashboard.
 git clone https://github.com/satheez/laravel-rate-limit-dashboard.git
 cd laravel-rate-limit-dashboard
 composer install
-npm install
-npm run build
 ```
 
 ## Running Tests
@@ -50,7 +48,7 @@ Apply changes:
 vendor/bin/rector process
 ```
 
-Rector enforces PHP 8.1+ modernization, dead code removal, and early-return patterns. Run it before opening a PR and commit any changes it produces.
+Rector enforces PHP 8.2+ modernization, dead code removal, and early-return patterns. Run it before opening a PR and commit any changes it produces.
 
 ## Branch Naming
 
