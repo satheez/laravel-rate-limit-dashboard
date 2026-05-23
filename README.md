@@ -68,8 +68,8 @@ composer require satheez/laravel-rate-limit-dashboard
 Publish configuration and migrations:
 
 ```bash
-php artisan vendor:publish --provider="Sa\RateLimitDashboard\RateLimitDashboardServiceProvider" --tag="config"
-php artisan vendor:publish --provider="Sa\RateLimitDashboard\RateLimitDashboardServiceProvider" --tag="migrations"
+php artisan vendor:publish --provider="Sa\RateLimitDashboard\RateLimitDashboardServiceProvider" --tag="rate-limit-dashboard-config"
+php artisan vendor:publish --provider="Sa\RateLimitDashboard\RateLimitDashboardServiceProvider" --tag="rate-limit-dashboard-migrations"
 php artisan migrate
 ```
 
