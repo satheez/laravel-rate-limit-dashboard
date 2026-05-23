@@ -8,6 +8,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -34,6 +37,9 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite3, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick
           coverage: none
+
+      - name: Configure Composer authentication
+        run: composer config --global github-oauth.github.com "${{ github.token }}"
 
       - name: Install dependencies
         run: |
