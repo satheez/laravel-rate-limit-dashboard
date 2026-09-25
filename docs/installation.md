@@ -2,8 +2,8 @@
 
 ## Requirements
 
-- PHP 8.2 or higher
-- Laravel 11.x, 12.x, or 13.x
+- PHP 8.2 or higher (Laravel 13 requires PHP 8.3 or higher)
+- Laravel 12.x or 13.x
 - A SQL database supported by Laravel's database layer
 
 ## 1. Require the Package

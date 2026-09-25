@@ -8,7 +8,7 @@
 
 [![Tests](https://github.com/satheez/laravel-rate-limit-dashboard/actions/workflows/tests.yml/badge.svg)](https://github.com/satheez/laravel-rate-limit-dashboard/actions/workflows/tests.yml)
 [![PHP](https://img.shields.io/badge/PHP-8.2%2B-blue)](https://www.php.net)
-[![Laravel](https://img.shields.io/badge/Laravel-11%20%7C%2012%20%7C%2013-red)](https://laravel.com)
+[![Laravel](https://img.shields.io/badge/Laravel-12%20%7C%2013-red)](https://laravel.com)
 [![License](https://img.shields.io/packagist/l/satheez/laravel-rate-limit-dashboard.svg)](LICENSE.md)
 
 </div>
