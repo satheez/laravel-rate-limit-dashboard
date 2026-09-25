@@ -1,0 +1,3 @@
+# Larastan boots this provider so package views resolve as view-string.
+providers:
+  - Sa\RateLimitDashboard\RateLimitDashboardServiceProvider

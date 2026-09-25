@@ -18,3 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Aligned documentation, CI, static analysis configuration, and package dependencies with the implemented package behavior.
+- Dropped Laravel 11 support. The package now requires Laravel 12 or 13. Laravel 11 security support ended on March 12, 2026, and current Composer security advisories for `laravel/framework` have no patched 11.x release.
+- CI checks out the repository with `actions/checkout` v7 and tests PHP 8.2–8.4 against Laravel 12 and 13. Laravel 13 jobs exclude PHP 8.2.
+
+### Fixed
+- Registered the package service provider for static analysis so Larastan can resolve the namespaced dashboard view.
