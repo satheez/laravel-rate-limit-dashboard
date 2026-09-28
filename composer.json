@@ -59,6 +59,6 @@
     "lint": "vendor/bin/phpstan analyse",
     "refactor": "vendor/bin/rector process"
   },
-  "minimum-stability": "dev",
+  "minimum-stability": "stable",
   "prefer-stable": true
 }
